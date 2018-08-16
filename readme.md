@@ -4,7 +4,7 @@
 
 ### INTRODUCTION
 - A non-deep distribution adaptation method to decrease the MMD
-distance of source and target domain for machine learning.\
+ between source and target domain for machine learning. \
   ![Alt text](imgs/1534409052.jpg)
 
 - $$dist(X_{S},X_{T})=\mu \lVert\frac{1}{n_{1}}\sum\limits_{i=1}^{n_{1}}\phi(x^{S}_{i})-\frac{1}{n_{2}}\sum\limits_{i=1}^{n_{2}}\phi(x^{T}_{i})\rVert +\\
