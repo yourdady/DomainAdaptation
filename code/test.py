@@ -47,7 +47,9 @@ def test_coil1():
     Y_tar_l = Y_tar[:n_tar_l]
     X_tar = X_tar[n_tar_l:]
     Y_tar = Y_tar[n_tar_l:]
-    bda.fit_transform(X_src,Y_src,X_tar,Y_tar,X_tar_l,Y_tar_l,classifier=clf,mu=0.1)
+    Z = bda.fit_transform(X_src,Y_src,X_tar,Y_tar,X_tar_l,Y_tar_l,classifier=clf,mu=0.1)
+
+
     # bda.fit_transform(X_src,Y_src,X_tar,Y_tar,classifier=clf,mu=0.1)
 
 if __name__ == '__main__':
