@@ -1,3 +1,11 @@
+
+''' 
+@project DomainAdaptation
+@author Peng
+@file BDA.py
+@time 2018-07-16
+'''
+
 import numpy as np
 import scipy as scp
 import scipy.sparse
@@ -54,16 +62,29 @@ class BDA():
             classifier : classifier for adaptation.
     
         """
+        n_tar_l = 0
         n_src = X_src.shape[0]
         n_tar = X_tar.shape[0]
+        if X_tar_l is not None and Y_tar_l is not None:
+            n_tar_l = X_tar_l.shape[0]
 
         X_src = self.zscore(X_src)
-        X_tar = self.zscore(X_tar)
+        if X_tar_l is not None and Y_tar_l is not None:
+            X_tar_zscore = self.zscore(np.concatenate((X_tar,X_tar_l)))
+            X_tar = X_tar_zscore[:n_tar]
+            X_tar_l = X_tar_zscore[n_tar:]
+
+        else:
+            X_tar = self.zscore(X_tar)
 
         X_src[np.isnan(X_src)] = 0
         X_tar[np.isnan(X_tar)] = 0
+        if X_tar_l is not None and Y_tar_l is not None:
+            X_tar_l[np.isnan(X_tar_l)] = 0
 
         X = np.hstack((np.transpose(X_src), np.transpose(X_tar)))
+        if X_tar_l is not None and Y_tar_l is not None:
+            X = np.hstack((X, np.transpose(X_tar_l)))
         X = np.dot(X, np.diag(1.0 / np.sqrt(np.sum(X * X,axis=0))))
         m,n = X.shape
         K_o = None
@@ -72,7 +93,7 @@ class BDA():
             X_o = np.dot(X_o, np.diag(1.0 / np.sqrt(np.sum(X_o * X_o, axis=0))))
             K_o = self.get_kernel(self.kerneltype, self.kernelparam, X, X_o)
         e = np.vstack((1./n_src * np.ones((n_src,1),dtype=np.float32),
-                       -1./n_tar * np.ones((n_tar,1),dtype=np.float32)))
+                       -1./(n_tar+n_tar_l) * np.ones((n_tar+n_tar_l,1),dtype=np.float32)))
         C = np.max(Y_tar) + 1
         M = np.dot(e ,e.T ) * C
         Y_tar_pseudo = []
@@ -89,10 +110,15 @@ class BDA():
                     if self.mode == 'W-BDA':
                         ps = len(np.where(Y_src == cls))/len(Y_src)
                         pt = len(np.where(Y_tar_pseudo == cls))/len(Y_tar_pseudo)
-
+                        if X_tar_l is not None and Y_tar_l is not None:
+                            pt = (len(np.where(Y_tar_pseudo == cls)) + len(np.where(Y_tar_l == cls))) / \
+                                 (len(Y_tar_pseudo) + n_tar_l)
                     index = np.where(Y_src == cls)
                     e[index] = math.sqrt(ps) / len(index[0])
-                    index = np.where(Y_tar == cls)
+                    if X_tar_l is not None and Y_tar_l is not None:
+                        index = np.where(np.concatenate((np.array(Y_tar_pseudo), Y_tar_l)) == cls)
+                    else:
+                        index = np.where(Y_tar_pseudo == cls)
                     e[index[0] + n_src] = -math.sqrt(pt) / len(index[0])
                     e[np.isinf(e)] = 0
                     N = N + np.dot(e, e.T)
@@ -130,11 +156,14 @@ class BDA():
                 Z = np.dot(np.transpose(A), K)
                 Z = np.dot(Z, np.diag(1.0/np.sqrt(np.sum(np.multiply(Z,Z), 0))))
                 Z_src = Z.T[:n_src]
-                Z_tar = Z.T[:n_tar]
+                Z_tar = Z.T[n_src:n_src + n_tar]
                 classifier.fit(Z_src,Y_src)
                 Y_tar_pseudo = classifier.predict(Z_tar)
                 acc = accuracy_score(Y_tar, Y_tar_pseudo)
+                # acc2 = accuracy_score(np.concatenate((Y_tar,Y_tar_l)),
+                #                                      np.concatenate((np.array(Y_tar_pseudo),Y_tar_l)))
                 print('{} iterations accuracy: {}'.format(T,acc))
+                # print('{} iterations accuracy2: {}'.format(T,acc2))
 
         return Z, Z_o
 
