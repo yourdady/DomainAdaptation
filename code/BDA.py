@@ -14,7 +14,8 @@ from scipy.sparse import linalg
 from sklearn.metrics import accuracy_score
 class BDA():
 
-    """Balanced Domain Adaptation.
+    """ A modified Balanced Distribution Adaptation, when limited labeled data on target domain 
+    are available, they could be used to 
         Parameters
         ----------
         dim : int, number of new features.
@@ -59,7 +60,7 @@ class BDA():
             
             iterations : int.
             
-            classifier : classifier for adaptation.
+            classifier : classifier to predict pseudo labels.
     
         """
         n_tar_l = 0
@@ -91,7 +92,7 @@ class BDA():
         if X_o is not None:
             X_o = X_o.T
             X_o = np.dot(X_o, np.diag(1.0 / np.sqrt(np.sum(X_o * X_o, axis=0))))
-            K_o = self.get_kernel(self.kerneltype, self.kernelparam, X, X_o)
+            K_o = self._get_kernel(self.kerneltype, self.kernelparam, X, X_o)
         e = np.vstack((1./n_src * np.ones((n_src,1),dtype=np.float32),
                        -1./(n_tar+n_tar_l) * np.ones((n_tar+n_tar_l,1),dtype=np.float32)))
         C = np.max(Y_tar) + 1
@@ -136,23 +137,47 @@ class BDA():
                                               self.dim,
                                               B,
                                               which='SM')
-                return np.dot(np.transpose(A), X)
-            else:
-                K = self.get_kernel(self.kerneltype, self.kernelparam, X)
 
-                #scipy eigs AV=BVD特征值经常不收敛，直接计算pinv(B)*A的特征值
-
-                val, A = np.linalg.eig(np.dot(np.linalg.pinv(np.dot(np.dot(K, H), K.T)),
-                                              np.dot(np.dot(K, M), K.T) + lam * np.eye(n)))
-                eig_values = val.reshape(len(val), 1)
-                index_sorted = np.argsort(-eig_values, axis=0)
-                A = A[:, index_sorted]
-                A = A.reshape((A.shape[0], A.shape[1]))
+                Z = np.dot(np.transpose(A), X)
+                Z_o = None
 
                 if X_o is not None:
-                    jda_o = np.dot(np.transpose(A), K_o)
-                    Z_o = np.dot(jda_o, np.diag(1.0/np.sqrt(np.sum(np.multiply(jda_o,jda_o), 0))))
+                    bda_o = np.dot(np.transpose(A), X_o)
+                    Z_o = np.dot(bda_o, np.diag(1.0 / np.sqrt(np.sum(np.multiply(bda_o, bda_o), 0))))
+                Z = np.dot(Z, np.diag(1.0 / np.sqrt(np.sum(np.multiply(Z, Z), 0))))
+                print('Z shape', Z.shape)
+                Z_src = Z.T[:n_src]
+                Z_tar = Z.T[n_src:n_src + n_tar]
+                classifier.fit(Z_src, Y_src)
+                Y_tar_pseudo = classifier.predict(Z_tar)
+                acc = accuracy_score(Y_tar, Y_tar_pseudo)
+                print('{} iterations accuracy: {}'.format(T, acc))
 
+            else:
+                K = self._get_kernel(self.kerneltype, self.kernelparam, X)
+
+                #scipy eigs AV=BVD特征值经常不收敛，直接计算pinv(B)*A的特征值?
+                #列向量为特征值
+                val, A = scp.linalg.eig(np.dot(np.linalg.pinv(np.dot(np.dot(K, H), K.T)),
+                                              np.dot(np.dot(K, M), K.T) + lam * np.eye(n)))
+                eig_values = val.reshape(len(val), 1)
+                index_sorted = np.argsort(eig_values, axis=0)
+                A = A[:,index_sorted]
+                A = A.reshape((A.shape[0], A.shape[1]))[:,:self.dim]
+
+                # A = np.dot(np.dot(K, M), np.transpose(K))
+                # B = np.dot(np.dot(K, H), np.transpose(K))
+                # A[np.isinf(A)] = 0
+                # B[np.isinf(B)] = 0
+                # val, A = scp.sparse.linalg.eigs(A + lam * np.eye(n),
+                #                                 self.dim,
+                #                                 B,
+                #                                 which='SM')
+
+
+                if X_o is not None:
+                    bda_o = np.dot(np.transpose(A), K_o)
+                    Z_o = np.dot(bda_o, np.diag(1.0 / np.sqrt(np.sum(np.multiply(bda_o,bda_o), 0))))
                 Z = np.dot(np.transpose(A), K)
                 Z = np.dot(Z, np.diag(1.0/np.sqrt(np.sum(np.multiply(Z,Z), 0))))
                 Z_src = Z.T[:n_src]
@@ -168,10 +193,19 @@ class BDA():
         return Z, Z_o
 
 
-    def get_kernel(self, kerneltype, kernelparam, x1, x2=None):
+    def _get_kernel(self, kerneltype, kernelparam, x1, x2=None):
+        """
+        
+        :param kerneltype: str, 'primal', 'rbf', 'poly' and 'linear' are optional. 
+        :param kernelparam: float, kernel param.
+        :param x1: 2d array-like.
+        :param x2: 2d array-like.
+        :return: kernel matrix.
+        """
 
         dim, n1 = x1.shape
         K = None
+        n2 = None
         if x2 is not None:
             n2 = x2.shape[1]
         if kerneltype == 'linear':
