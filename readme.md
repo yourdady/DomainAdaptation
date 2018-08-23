@@ -16,9 +16,11 @@ when limited labeled data can be obtained on target
 domain, they could be used to improve the performance.
 ----------------------------------------------
 ### HOW TO USE
+```python
 - Z, _ = fit_transform(X_src,Y_src,X_tar,Y_tar,X_tar_l,Y_tar_l) \
 - X_src = Z.T[:n_src]
 - X_tar = Z.T[n_src:]
+```
 ----------------------------------------------
 
 ### RESULT
