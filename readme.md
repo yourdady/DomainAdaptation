@@ -11,7 +11,8 @@
  (1-\mu)\sum\limits_{c=1}^{C}\lVert\frac{1}{n_{c}}\sum\limits_{x^{S}_{i}\in \mathrm{X}_{S}^{(c)}}\phi(x^{S}_{i})-\frac{1}{m_{c}}\sum\limits_{x^{T}_{i}\in \mathrm{X}_{T}^{(c)}}\phi(x^{T}_{i})\rVert $$
 ----------------------------------------------
 ### NEW FEATURE
-- Different from original BDA, which works like an EM algorithm.
+- Original BDA, assumes that no labeled data can be obtained on
+target domain, which works like an EM algorithm. In this project,
 when limited labeled data can be obtained on target
 domain, they could be used to improve the performance in each iteration.
 ----------------------------------------------
