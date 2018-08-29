@@ -11,16 +11,16 @@
  (1-\mu)\sum\limits_{c=1}^{C}\lVert\frac{1}{n_{c}}\sum\limits_{x^{S}_{i}\in \mathrm{X}_{S}^{(c)}}\phi(x^{S}_{i})-\frac{1}{m_{c}}\sum\limits_{x^{T}_{i}\in \mathrm{X}_{T}^{(c)}}\phi(x^{T}_{i})\rVert $$
 ----------------------------------------------
 ### NEW FEATURE
-- Different from original BDA,
+- Different from original BDA, which works like an EM algorithm.
 when limited labeled data can be obtained on target
-domain, they could be used to improve the performance.
+domain, they could be used to improve the performance in each iteration.
 ----------------------------------------------
 ### HOW TO USE
 ```python
-- Z, _ = fit_transform(X_src,Y_src,X_tar,Y_tar,X_tar_l,Y_tar_l,
-lam,X_o, mu, iterations,classifier)
-- X_src = Z.T[:n_src]
-- X_tar = Z.T[n_src:]
+    Z, _ = fit_transform(X_src,Y_src,X_tar,Y_tar,X_tar_l,Y_tar_l,
+    lam,X_o, mu, iterations,classifier)
+    X_src = Z.T[:n_src]
+    X_tar = Z.T[n_src:]
 ```
 ----------------------------------------------
 
